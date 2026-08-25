@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+/*
+  Brand Memory design tokens.
+  Editorial, near-monochrome, one signal colour. No gradients, no glow.
+*/
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  --color-paper: #fbfaf8;
+  --color-surface: #ffffff;
+  --color-ink: #16150f;
+  --color-ink-muted: #6b6862;
+  --color-ink-faint: #9a968e;
+  --color-rule: #e3e0d9;
+  --color-rule-strong: #cfcbc2;
+  --color-signal: #b8410f;
+  --color-signal-soft: #fdf0e8;
+  --color-positive: #2f6b3f;
+  --color-warning: #8a6100;
+  --color-critical: #a1231d;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv05", "ss01";
+  }
+
+  ::selection {
+    background-color: var(--color-signal);
+    color: #fff;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Metadata labels: small, spaced, uppercase. Used all over the UI. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+  }
+
+  .rule {
+    border-color: var(--color-rule);
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  button:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+  }
+}
+
+/* Long-form generated answers. */
+.prose-answer {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.prose-answer p + p {
+  margin-top: 0.85em;
+}
+
+.prose-answer ol,
+.prose-answer ul {
+  margin-top: 0.6em;
+  padding-left: 1.25em;
+  list-style: revert;
+}
+
+.prose-answer h1,
+.prose-answer h2,
+.prose-answer h3 {
+  font-weight: 600;
+  margin-top: 1.2em;
+  margin-bottom: 0.35em;
+}
