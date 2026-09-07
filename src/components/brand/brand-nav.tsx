@@ -8,6 +8,7 @@ const SECTIONS = [
   { segment: "", label: "Overview" },
   { segment: "sources", label: "Sources" },
   { segment: "memory", label: "Brand memory" },
+  { segment: "external", label: "External memory" },
   { segment: "generate", label: "Generate" },
   { segment: "settings", label: "Settings" },
 ] as const;

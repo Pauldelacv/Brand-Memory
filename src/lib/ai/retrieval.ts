@@ -6,11 +6,17 @@ import { getAIProvider } from "@/lib/ai";
 import { buildBrandContext } from "@/lib/ai/ranking";
 import type { BrandContext, RetrievalCandidate } from "@/lib/ai/ranking";
 import { DatabaseError } from "@/lib/db/queries";
+import { retrieveExternalCandidates } from "@/lib/external/retrieval";
 
 /**
  * Retrieval, in the order the product spec lays out:
  *   embed the query -> search structured memory -> search document chunks ->
  *   combine, rank, resolve contradictions -> build a selective context.
+ *
+ * The external memory is searched in the same pass. Public communication is
+ * labelled as such in the context and never competes for an internal claim
+ * slot, so an answer can say "the guidelines say X, and here is what you
+ * actually published" instead of quietly picking one.
  */
 
 export interface RetrievalOptions {
@@ -18,6 +24,10 @@ export interface RetrievalOptions {
   chunkMatches?: number;
   minSimilarity?: number;
   tokenBudget?: number;
+  /** Set to false to answer purely from the brand's own material. */
+  includeExternal?: boolean;
+  externalMemoryMatches?: number;
+  externalChunkMatches?: number;
 }
 
 interface SourceMeta {
@@ -65,7 +75,9 @@ export async function retrieveBrandContext(
   const provider = getAIProvider();
   const embedding = await provider.generateEmbedding(query);
 
-  const [memoryResult, chunkResult, sourceMeta] = await Promise.all([
+  const includeExternal = options.includeExternal !== false;
+
+  const [memoryResult, chunkResult, sourceMeta, externalCandidates] = await Promise.all([
     supabase.rpc("match_memory_entries", {
       p_brand_id: brandId,
       p_query_embedding: embedding,
@@ -79,6 +91,13 @@ export async function retrieveBrandContext(
       p_min_similarity: options.minSimilarity ?? 0.1,
     }),
     loadSourceMeta(supabase, brandId),
+    includeExternal
+      ? retrieveExternalCandidates(supabase, brandId, embedding, {
+          memoryMatches: options.externalMemoryMatches ?? 6,
+          chunkMatches: options.externalChunkMatches ?? 8,
+          minSimilarity: options.minSimilarity ?? 0.1,
+        })
+      : Promise.resolve([]),
   ]);
 
   if (memoryResult.error) {
@@ -124,6 +143,7 @@ export async function retrieveBrandContext(
         updatedAt: null,
       };
     }),
+    ...externalCandidates,
   ];
 
   return buildBrandContext(candidates, { tokenBudget: options.tokenBudget });

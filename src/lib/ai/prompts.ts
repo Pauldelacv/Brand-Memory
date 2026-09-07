@@ -8,6 +8,8 @@ const BASE_RULES = [
   "If the memory does not cover something, say so plainly instead of inventing it.",
   "Never soften or merge contradictory sources: if the block lists contradictions, state which position you used and why.",
   "Cite the numbered context entries you relied on as [1], [2] and so on.",
+  "Context entries marked 'public communication' are things the brand actually published, with dates.",
+  "Treat them as evidence of what was said in public, never as the brand's current doctrine, and say so when you use them.",
   "Write in the brand's own tone of voice when the memory describes one.",
   "Do not describe yourself as an AI or narrate your process.",
 ].join("\n");
@@ -72,4 +74,104 @@ export function extractionUserPrompt(brand: Brand, chunks: Array<{ id: string; c
     .join("\n\n---\n\n");
 
   return ["BRAND PROFILE", brandProfile(brand), "", "SOURCE EXCERPTS", body].join("\n");
+}
+
+/* ---------------------------------------------------------------------------
+ * External Brand Memory
+ * ------------------------------------------------------------------------- */
+
+export const EXTERNAL_EXTRACTION_SYSTEM_PROMPT = [
+  "You read one piece of content a brand has published or that was published about it,",
+  "and record what it communicates. You are building a memory of public communication,",
+  "not summarising an article.",
+  "Return a single JSON object and nothing else — no prose, no markdown fence.",
+  "",
+  "Shape:",
+  '{ "summary": string, "language": string, "narrative": string, "tone": string[],',
+  '  "entries": [ { "kind": KIND, "label": string, "statement": string, "confidence": number, "excerpt": string } ] }',
+  "",
+  "KIND is one of: IDENTITY, POSITIONING, AUDIENCE, PERSONALITY, VOICE, VALUES, PRODUCT,",
+  "SERVICE, MESSAGE, CLAIM, TOPIC, NARRATIVE, SPOKESPERSON, CREATIVE_THEME, STRATEGIC_THEME.",
+  "",
+  "Rules:",
+  '- label is the theme in two or three lowercase words, e.g. "sustainability", "premium craftsmanship",',
+  '  "female cyclists". Reuse the same wording for the same theme across different contents: the label is',
+  "  what lets one message found in nine articles count as one theme said nine times.",
+  "- statement is what this content says about that theme, in one or two sentences, in English.",
+  "- excerpt must be copied verbatim from the content. Never paraphrase it.",
+  "- confidence is 0..1 and reflects how explicitly the content supports the statement.",
+  "- tone is at most six single adjectives describing how it is written, lowercase.",
+  "- narrative is the story the content tells about the brand, in one sentence.",
+  "- Record only what this content actually says. An empty entries array is a valid answer.",
+  "- Do not infer what the brand is like in general. This is one dated piece of evidence.",
+  "- If the content is not about the brand at all, return an empty entries array.",
+].join("\n");
+
+export function externalExtractionUserPrompt(
+  brand: Brand,
+  content: {
+    title: string;
+    publisher: string | null;
+    author: string | null;
+    publishedAt: string | null;
+    url: string;
+    body: string;
+  },
+  maxChars = 12000,
+): string {
+  const header = [
+    `Title: ${content.title || "(untitled)"}`,
+    content.publisher ? `Publisher: ${content.publisher}` : null,
+    content.author ? `Author: ${content.author}` : null,
+    content.publishedAt ? `Published: ${content.publishedAt.slice(0, 10)}` : null,
+    `URL: ${content.url}`,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+
+  return [
+    "BRAND PROFILE",
+    brandProfile(brand),
+    "",
+    "PUBLISHED CONTENT",
+    header,
+    "",
+    content.body.slice(0, maxChars),
+  ].join("\n");
+}
+
+export const CONTRADICTION_JUDGE_SYSTEM_PROMPT = [
+  "You review candidate contradictions between a brand's internal memory (what it says it is)",
+  "and its public communication (what it actually published).",
+  "Return a single JSON object and nothing else — no prose, no markdown fence.",
+  "",
+  'Shape: { "verdicts": [ { "id": string, "contradiction": boolean, "confidence": number, "reason": string } ] }',
+  "",
+  "Rules:",
+  "- Judge only the pairs you are given. Never introduce a pair of your own.",
+  "- id must be copied exactly from the candidate.",
+  "- contradiction is true only when both statements cannot be true of the same brand at the same time.",
+  "- Two statements about different aspects of the brand are not a contradiction.",
+  "- A deliberate tension the brand states on purpose is not a contradiction.",
+  "- A change over time is a contradiction only if the internal memory still asserts the old position.",
+  "- reason is one sentence, and must refer to the two statements.",
+].join("\n");
+
+export function contradictionJudgeUserPrompt(
+  brand: Brand,
+  candidates: Array<{ id: string; internal: string; external: string; occurrences: number; lastSeen: string | null }>,
+): string {
+  const body = candidates
+    .map((candidate) =>
+      [
+        `id: ${candidate.id}`,
+        `internal memory: ${candidate.internal}`,
+        `public communication (${candidate.occurrences} content${candidate.occurrences === 1 ? "" : "s"}${
+          candidate.lastSeen ? `, last on ${candidate.lastSeen.slice(0, 10)}` : ""
+        }): ${candidate.external}`,
+      ].join("\n"),
+    )
+    .join("\n\n---\n\n");
+
+  return ["BRAND PROFILE", brandProfile(brand), "", "CANDIDATE PAIRS", body].join("\n");
 }

@@ -30,4 +30,9 @@ export const serverEnv = {
   embeddingProvider: () => optional("AI_EMBEDDING_PROVIDER") ?? "openai",
   textModel: () => optional("AI_TEXT_MODEL"),
   embeddingModel: () => optional("AI_EMBEDDING_MODEL"),
+  /** Shared secret the scheduled external sync must present. */
+  cronSecret: () => optional("CRON_SECRET"),
+  /** Optional hosted scraping service for the external crawler. */
+  externalFetchEndpoint: () => optional("EXTERNAL_FETCH_ENDPOINT"),
+  externalFetchApiKey: () => optional("EXTERNAL_FETCH_API_KEY"),
 };

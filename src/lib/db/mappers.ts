@@ -37,6 +37,7 @@ export function toBrand(row: BrandRow): Brand {
     website: row.website,
     audience: row.audience,
     positioning: row.positioning,
+    ownedDomains: row.owned_domains ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

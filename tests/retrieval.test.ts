@@ -22,19 +22,28 @@ function installProvider() {
 afterEach(() => setAIProvider(null));
 
 describe("brand isolation in retrieval", () => {
-  it("scopes both vector searches to the requested brand", async () => {
+  it("scopes every vector search, internal and external, to the requested brand", async () => {
     installProvider();
     const { client, rpcs, queries } = createSupabaseStub({
       tables: { brand_sources: [] },
-      rpc: { match_memory_entries: [], match_document_chunks: [] },
+      rpc: {
+        match_memory_entries: [],
+        match_document_chunks: [],
+        match_external_memory_entries: [],
+        match_external_chunks: [],
+      },
     });
 
     await retrieveBrandContext(client, BRAND_A, "What is our tone of voice?");
 
     expect(rpcs.map((rpc) => rpc.fn).sort()).toEqual([
       "match_document_chunks",
+      "match_external_chunks",
+      "match_external_memory_entries",
       "match_memory_entries",
     ]);
+    // The brand filter is the only thing standing between two tenants' public
+    // records, so it is asserted on every call rather than on the first.
     for (const rpc of rpcs) {
       expect(rpc.args.p_brand_id).toBe(BRAND_A);
     }
@@ -42,6 +51,21 @@ describe("brand isolation in retrieval", () => {
       table: "brand_sources",
       filters: [{ column: "brand_id", value: BRAND_A }],
     });
+  });
+
+  it("can answer from the brand's own material only", async () => {
+    installProvider();
+    const { client, rpcs } = createSupabaseStub({
+      tables: { brand_sources: [] },
+      rpc: { match_memory_entries: [], match_document_chunks: [] },
+    });
+
+    await retrieveBrandContext(client, BRAND_A, "tone", { includeExternal: false });
+
+    expect(rpcs.map((rpc) => rpc.fn).sort()).toEqual([
+      "match_document_chunks",
+      "match_memory_entries",
+    ]);
   });
 
   it("sends an embedding of the expected width to pgvector", async () => {

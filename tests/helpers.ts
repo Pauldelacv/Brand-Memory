@@ -31,3 +31,15 @@ export function memoryCandidate(overrides: Partial<RetrievalCandidate> = {}): Re
     ...overrides,
   });
 }
+
+export function externalCandidate(overrides: Partial<RetrievalCandidate> = {}): RetrievalCandidate {
+  return candidate({
+    kind: "EXTERNAL_DOCUMENT",
+    label: "Frame Quarterly",
+    sourceName: "Frame Quarterly",
+    content: "Velvire is accessible to everyone.",
+    url: "https://framequarterly.example.com/velvire",
+    publishedAt: "2025-06-18T00:00:00.000Z",
+    ...overrides,
+  });
+}

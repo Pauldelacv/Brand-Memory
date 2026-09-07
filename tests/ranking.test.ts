@@ -7,7 +7,7 @@ import {
   resolveConflicts,
   scoreCandidate,
 } from "@/lib/ai/ranking";
-import { candidate, memoryCandidate } from "./helpers";
+import { candidate, externalCandidate, memoryCandidate } from "./helpers";
 
 describe("authority ladder", () => {
   it("ranks a user-edited memory entry above everything else", () => {
@@ -194,5 +194,48 @@ describe("context assembly", () => {
 
     expect(context.candidates).toHaveLength(0);
     expect(context.text).toContain("No brand knowledge");
+  });
+});
+
+describe("the public record", () => {
+  it("sits below the brand's own sources but above an AI inference", () => {
+    expect(authorityTier(externalCandidate())).toBe(AUTHORITY_TIERS.PUBLIC_RECORD);
+    expect(AUTHORITY_TIERS.PUBLIC_RECORD).toBeGreaterThan(AUTHORITY_TIERS.OTHER_SOURCE);
+    expect(AUTHORITY_TIERS.PUBLIC_RECORD).toBeLessThan(AUTHORITY_TIERS.AI_INFERENCE);
+  });
+
+  it("never competes for an internal claim slot", () => {
+    // A public statement that disagrees with the brand memory is a finding for
+    // cross analysis. Dropping it here would hide the thing worth seeing.
+    const scored = [
+      memoryCandidate({ refId: "internal", label: "Positioning", category: "POSITIONING", content: "Premium and exclusive." }),
+      externalCandidate({ refId: "public", label: "Positioning", content: "Accessible to everyone." }),
+    ].map(scoreCandidate);
+
+    const { kept, conflicts } = resolveConflicts(scored);
+
+    expect(kept.map((entry) => entry.refId).sort()).toEqual(["internal", "public"]);
+    expect(conflicts).toHaveLength(0);
+  });
+
+  it("is labelled as public communication in the context the model reads", () => {
+    const context = buildBrandContext([
+      memoryCandidate({ refId: "m1", label: "Tone of voice" }),
+      externalCandidate({ refId: "x1" }),
+    ]);
+
+    expect(context.text).toContain("internal memory /");
+    expect(context.text).toContain("public communication /");
+    expect(context.text).toContain("published: 2025-06-18");
+  });
+
+  it("carries the link and the date into the citation", () => {
+    const context = buildBrandContext([externalCandidate({ refId: "x1" })]);
+
+    expect(context.citations[0]).toMatchObject({
+      kind: "EXTERNAL_DOCUMENT",
+      url: "https://framequarterly.example.com/velvire",
+      publishedAt: "2025-06-18T00:00:00.000Z",
+    });
   });
 });

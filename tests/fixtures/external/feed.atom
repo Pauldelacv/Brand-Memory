@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>The Cycling Review — Industry</title>
+  <entry>
+    <title>Velvire opens a repair atelier in Lyon</title>
+    <link rel="alternate" href="https://cyclingreview.example.com/2025/03/velvire-repair-atelier" />
+    <published>2025-03-12T07:30:00Z</published>
+    <author><name>Marta Oyelaran</name></author>
+    <summary>Velvire has opened a repair atelier in Lyon.</summary>
+  </entry>
+  <entry>
+    <title>Frame builders bet on servicing</title>
+    <link rel="alternate" href="https://cyclingreview.example.com/2025/02/frame-builders-servicing" />
+    <updated>2025-02-20T11:00:00Z</updated>
+  </entry>
+</feed>

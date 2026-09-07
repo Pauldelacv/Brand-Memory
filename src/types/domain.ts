@@ -36,6 +36,8 @@ export interface Brand {
   website: string | null;
   audience: string | null;
   positioning: string | null;
+  /** Domains the brand publishes on itself: crawler allowlist and owned/earned split. */
+  ownedDomains: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -84,15 +86,31 @@ export interface Conversation {
   updatedAt: string;
 }
 
+/**
+ * Where a retrieved passage came from. The EXTERNAL_* kinds are the public
+ * record — what the brand actually published — and are labelled separately so
+ * an answer never passes a press quote off as brand doctrine.
+ */
+export const RETRIEVAL_KINDS = [
+  "MEMORY",
+  "DOCUMENT",
+  "EXTERNAL_MEMORY",
+  "EXTERNAL_DOCUMENT",
+] as const;
+export type RetrievalKind = (typeof RETRIEVAL_KINDS)[number];
+
 /** What the UI needs to explain "why did the AI generate this?". */
 export interface RetrievalCitation {
-  kind: "MEMORY" | "DOCUMENT";
+  kind: RetrievalKind;
   refId: string;
   label: string;
   excerpt: string;
   similarity: number;
   sourceId: string | null;
   sourceName: string | null;
+  /** External citations carry the publication date and a link back to the page. */
+  url?: string | null;
+  publishedAt?: string | null;
 }
 
 export interface ChatMessage {
@@ -123,4 +141,11 @@ export const GENERATION_MODE_LABELS: Record<GenerationMode, string> = {
   CREATE: "Create",
   EXPLORE: "Explore",
   COMPARE: "Compare",
+};
+
+export const RETRIEVAL_KIND_LABELS: Record<RetrievalKind, string> = {
+  MEMORY: "Memory",
+  DOCUMENT: "Document",
+  EXTERNAL_MEMORY: "External theme",
+  EXTERNAL_DOCUMENT: "Published content",
 };

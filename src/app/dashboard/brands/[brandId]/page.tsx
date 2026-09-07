@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/db/server";
 import { getOwnedBrand, listMemoryEntries, listSources } from "@/lib/db/queries";
+import { listBrandInsights, listExternalSources } from "@/lib/external/queries";
 import { computeCompleteness, summariseSources } from "@/lib/brand-health";
 import { MEMORY_CATEGORY_LABELS } from "@/types/domain";
 import { Panel, PanelHeader, EmptyState } from "@/components/ui/panel";
@@ -15,15 +16,24 @@ export default async function BrandOverviewPage({
   const { brandId } = await params;
   const { supabase } = await requireUser();
 
-  const [brand, sources, memory] = await Promise.all([
+  const [brand, sources, memory, externalSources, insights] = await Promise.all([
     getOwnedBrand(supabase, brandId),
     listSources(supabase, brandId),
     listMemoryEntries(supabase, brandId),
+    listExternalSources(supabase, brandId),
+    listBrandInsights(supabase, brandId),
   ]);
 
   const completeness = computeCompleteness(memory);
   const breakdown = summariseSources(sources);
   const base = `/dashboard/brands/${brand.id}`;
+
+  const publicContents = externalSources.filter((source) => source.status === "READY").length;
+  // The two halves of the memory are only useful next to each other, so the
+  // overview leads with where they disagree rather than with a count.
+  const divergences = insights.filter(
+    (insight) => insight.kind !== "ALIGNED" && insight.kind !== "MISSING_EXTERNAL",
+  );
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
@@ -104,6 +114,49 @@ export default async function BrandOverviewPage({
       </div>
 
       <aside className="space-y-8">
+        <Panel>
+          <PanelHeader
+            title="External memory"
+            description="What the brand has actually said in public"
+            action={
+              <Link href={`${base}/external`} className="text-xs text-signal underline underline-offset-4">
+                Open
+              </Link>
+            }
+          />
+
+          {publicContents === 0 ? (
+            <p className="px-5 py-4 text-xs leading-relaxed text-ink-muted">
+              No public content has been read yet. Add the brand&rsquo;s newsroom or a few articles to
+              compare what it says it is against what it has actually published.
+            </p>
+          ) : (
+            <>
+              <dl className="divide-y divide-rule">
+                {[
+                  ["Public contents", publicContents],
+                  ["Findings", insights.length],
+                  ["Divergences", divergences.length],
+                ].map(([label, value]) => (
+                  <div key={String(label)} className="flex items-center justify-between px-5 py-2.5">
+                    <dt className="text-xs text-ink-muted">{label}</dt>
+                    <dd className="font-mono text-sm text-ink">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              {divergences.length > 0 ? (
+                <div className="border-t border-rule px-5 py-3">
+                  <p className="label">Top divergence</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
+                    {divergences[0]?.summary}
+                  </p>
+                </div>
+              ) : null}
+            </>
+          )}
+        </Panel>
+
         <Panel>
           <PanelHeader title="Completeness" description="How much of the memory model is covered" />
           <div className="px-5 py-5">

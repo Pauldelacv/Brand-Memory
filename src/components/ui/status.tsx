@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 import type { SourceStatus } from "@/types/domain";
+import type { ExternalStatus } from "@/types/external";
 
 const STATUS_STYLES: Record<SourceStatus, string> = {
   UPLOADED: "border-rule-strong text-ink-muted",
@@ -14,6 +15,33 @@ export function StatusPill({ status }: { status: SourceStatus }) {
       className={cn(
         "inline-flex items-center border px-2 py-0.5 font-mono text-[0.6875rem] tracking-[0.08em] uppercase",
         STATUS_STYLES[status],
+      )}
+    >
+      {status}
+    </span>
+  );
+}
+
+/**
+ * External content moves through more states than an upload: it is discovered
+ * before it is fetched, and it can end as a duplicate of something already
+ * stored, which is an outcome rather than a failure.
+ */
+const EXTERNAL_STATUS_STYLES: Record<ExternalStatus, string> = {
+  DISCOVERED: "border-rule-strong text-ink-muted",
+  FETCHING: "border-warning text-warning",
+  PROCESSING: "border-warning text-warning",
+  READY: "border-positive text-positive",
+  FAILED: "border-critical text-critical",
+  DUPLICATE: "border-rule-strong text-ink-faint",
+};
+
+export function ExternalStatusPill({ status }: { status: ExternalStatus }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center border px-2 py-0.5 font-mono text-[0.6875rem] tracking-[0.08em] uppercase",
+        EXTERNAL_STATUS_STYLES[status],
       )}
     >
       {status}
